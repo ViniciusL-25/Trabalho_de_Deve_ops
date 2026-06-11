@@ -1,0 +1,81 @@
+version: '3.8'
+
+# 
+# QuickBite — Docker Compose
+# 
+
+services:
+
+  #  Banco de Dados 
+  db:
+    image: postgres:15-alpine
+    container_name: quickbite-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      # Persistência: dados sobrevivem ao docker compose down
+      - postgres_data:/var/lib/postgresql/data
+      # Script de inicialização executado na primeira subida
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Backend 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: quickbite-backend
+    environment:
+      # CORREÇÃO: usar nome do serviço "db", não "localhost"
+      DB_HOST: db
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        # CORREÇÃO: espera o banco estar realmente pronto (healthcheck)
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Frontend 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # URL usada pelo BROWSER (não pelo container) para acessar a API
+        REACT_APP_API_URL: http://localhost:3001
+    container_name: quickbite-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    restart: unless-stopped
+
+#  Rede interna 
+networks:
+  app-network:
+    driver: bridge
+
+#  Volumes persistentes 
+volumes:
+  postgres_data:
+    name: quickbite-postgres-data

@@ -1,0 +1,14 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# QuickBite — Variáveis de Ambiente
+# ATENÇÃO: este arquivo está no .gitignore — NUNCA commitar com senhas reais!
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Banco de Dados
+DB_HOST=db
+DB_PORT=5432
+DB_USER=quickbite_user
+DB_PASSWORD=quickbite_senha_segura
+DB_NAME=quickbite
+
+# Backend
+PORT=3001
